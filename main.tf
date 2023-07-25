@@ -78,7 +78,7 @@ locals {
   globalPolicyData = file(local.apimGlobalPolicybase)
 
   corsPolicyData = templatefile(local.corsPolicyTemplate, {
-    allowedHeaders = local.cors.allowedHeaders,
+    allowedHeaders = setunion(local.cors.allowedHeaders, local.sensitiveHeadersList)
     allowedOrigins = local.cors.allowedOrigins,
     allowedMethods = local.cors.allowedMethods,
   })
