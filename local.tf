@@ -1,9 +1,48 @@
 locals {
   global_constants = {
     brandHostMapping     = "{\"azure-api.net\" : \"azu1\"}"
-    defaultSystemBrand         = "azu"
+    defaultSystemBrand   = "azu"
     sensitiveHeadersList = "Ocp-Apim-Subscription-Key,x-test-1,x-test-2"
   }
-  apim_global_policy_xml_content = "${path.module}/policies/global-policy.xml"
-  api_policy_xml_content = "${path.module}/policies/api-policy.xml"
+  sensitiveHeadersList = [
+    "Ocp-Apim-Subscription-Key",
+    "x-test-1",
+    "x-test-2"
+  ]
+
+  cors = {
+    allowedOrigins = [
+      "https://example.com",
+      "https://api.example.com",
+    ]
+    allowedHeaders = [
+      "content-Type",
+      "Content-length",
+      "Accept",
+      "Origin",
+      "Access-control-Allow-credentials",
+      "Authorization",
+      "Accept-API-Version",
+      "x-test-client",
+      "x-test-brand",
+      "x-test-channel",
+    ]
+    sensitiveHeadersList = [
+      "Ocp-Apim-Subscription-Key",
+      "x-test-1",
+      "x-test-2"
+    ]
+    allowedMethods = [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE",
+    ]
+
+  }
+  apimGlobalPolicybase = "${path.module}/policies/global-policy.xml"
+  apiPolicyBase        = "${path.module}/policies/api-policy.xml"
+
+  corsPolicyTemplate      = "${path.module}/templates/cors-template.tpl"
+  sensitivePolicyTemplate = "${path.module}/templates/sensitive-template.tpl"
 }

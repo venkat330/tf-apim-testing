@@ -43,28 +43,28 @@ resource "azurerm_api_management_named_value" "global_constants" {
   value               = each.value
 }
 resource "azurerm_api_management_product" "api_product" {
-    product_id              = "test-product"
-    api_management_name = azurerm_api_management.api_management.name
-    resource_group_name = azurerm_resource_group.resource_group.name
-    display_name            = "test-product"
-    subscription_required   = true
-    subscriptions_limit     = 10
-    approval_required       = false
-    published               = true
+  product_id            = "test-product"
+  api_management_name   = azurerm_api_management.api_management.name
+  resource_group_name   = azurerm_resource_group.resource_group.name
+  display_name          = "test-product"
+  subscription_required = true
+  subscriptions_limit   = 10
+  approval_required     = false
+  published             = true
 }
 resource "azurerm_api_management_api" "health_api" {
-  name = "health"
+  name                = "health"
   api_management_name = azurerm_api_management.api_management.name
   resource_group_name = azurerm_resource_group.resource_group.name
-  revision = "1"
-  display_name = "health"
-  protocols = ["https"]
+  revision            = "1"
+  display_name        = "health"
+  protocols           = ["https"]
   # version = "v1"
-  path = "health"
+  path                  = "health"
   subscription_required = true
   import {
     content_format = "openapi"
-    content_value = file("${path.root}/specs/healthcheck.xml")
+    content_value  = file("${path.root}/specs/healthcheck.xml")
   }
 }
 # resource "azurerm_api_management_api_version_set" "api_version" {
@@ -74,23 +74,47 @@ resource "azurerm_api_management_api" "health_api" {
 #   display_name = "apim_version"
 #   versioning_scheme = "Segment"
 # }
+locals {
+  globalPolicyData = file(local.apimGlobalPolicybase)
+
+  corsPolicyData = templatefile(local.corsPolicyTemplate, {
+    allowedHeaders = local.cors.allowedHeaders,
+    allowedOrigins = local.cors.allowedOrigins,
+    allowedMethods = local.cors.allowedMethods,
+  })
+
+  sensitivePolicyData = templatefile(local.sensitivePolicyTemplate, {
+    sensitiveHeaders = local.sensitiveHeadersList,
+  })
+
+  globalPolicyWithCors = replace(local.globalPolicyData,
+  "<!-- <cors-placeholder/> -->", local.corsPolicyData)
+  globalPolicyFinal = replace(local.globalPolicyWithCors,
+  "<!-- <sensitive-placeholder/> -->", local.sensitivePolicyData)
+
+}
+
+
 resource "azurerm_api_management_policy" "global_policy" {
   api_management_id = azurerm_api_management.api_management.id
-  xml_content = file(local.apim_global_policy_xml_content)
-  depends_on  = [azurerm_api_management_named_value.global_constants]
+
+  xml_content = local.globalPolicyFinal
+  depends_on = [azurerm_api_management_named_value.global_constants,
+    local.globalPolicyFinal,
+  ]
 }
 resource "azurerm_api_management_api_policy" "api_policy" {
-  api_name = azurerm_api_management_api.health_api.name
+  api_name            = azurerm_api_management_api.health_api.name
   api_management_name = azurerm_api_management.api_management.name
   resource_group_name = azurerm_resource_group.resource_group.name
-  xml_content = file(local.api_policy_xml_content)
-  depends_on  = [azurerm_api_management_named_value.global_constants]
+  xml_content         = file(local.apiPolicyBase)
+  depends_on          = [azurerm_api_management_named_value.global_constants]
 }
 resource "azurerm_api_management_product_policy" "api_product_policy" {
-  product_id = azurerm_api_management_product.api_product.product_id
+  product_id          = azurerm_api_management_product.api_product.product_id
   api_management_name = azurerm_api_management.api_management.name
   resource_group_name = azurerm_resource_group.resource_group.name
-  xml_content = templatefile("${path.root}/policies/prod-policy.xml", {})
+  xml_content         = templatefile("${path.root}/policies/prod-policy.xml", {})
 }
 
 
