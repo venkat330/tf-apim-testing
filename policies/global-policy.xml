@@ -1,5 +1,9 @@
 <policies>
   <inbound>
+    <!-- Do not disturb below commented placeholder strings lines,as they are used in templates for mapping data -->
+    <!-- <cors-placeholder/> -->
+    <!-- <sensitive-placeholder/> -->
+    <!-- Do not disturb above commented placeholder strings lines,as they are used in templates for mapping data -->
     <set-variable name="brandItems" value="{{brandHostMapping}}" />
     <set-variable name="defaultBrand" value="{{defaultSystemBrand}}" />
     <set-variable name="brand" value="@{
@@ -23,10 +27,6 @@
     <set-header name="x-brand-id" exists-action="override">
         <value>@(context.Variables.GetValueOrDefault<string>("brand"))</value>
     </set-header>
-    <!-- Do not disturb below commented placeholder strings lines,as they are used in templates for mapping data -->
-    <!-- <cors-placeholder/> -->
-    <!-- <sensitive-placeholder/> -->
-    <!-- Do not disturb above commented placeholder strings lines,as they are used in templates for mapping data -->
   </inbound>
     <backend>
         <forward-request />

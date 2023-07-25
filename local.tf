@@ -12,8 +12,8 @@ locals {
 
   cors = {
     allowedOrigins = [
-      "https://example.com",
-      "https://api.example.com",
+      "https://svr-test-dev-api-management.azure-api.net/",
+      "https://azure-api.net/"
     ]
     allowedHeaders = [
       "content-Type",
