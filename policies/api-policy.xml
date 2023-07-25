@@ -1,5 +1,6 @@
 <policies>
   <inbound>
+    <base />
     <rate-limit-by-key calls="100" renewal-period="60" counter-key="@((string)context.Request.Headers.GetValueOrDefault("Ocp-Apim-Subscription-Key", "default_key"))" />
     <quota-by-key calls="5000" renewal-period="300" counter-key="@(context.Subscription.Id)" />
   </inbound>
