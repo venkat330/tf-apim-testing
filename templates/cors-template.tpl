@@ -1,5 +1,6 @@
     <cors allow-credentials="true">
       <allowed-origins>
+        <origin>@(context.Request.OriginalUrl.Host.ToString( ))</origin>
         %{ for origin in allowedOrigins ~}
         <origin>${origin}</origin>
         %{ endfor ~}
@@ -15,4 +16,3 @@
         %{ endfor ~}
       </allowed-headers>
     </cors>
-

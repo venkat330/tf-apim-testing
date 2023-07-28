@@ -32,6 +32,14 @@
         <forward-request />
     </backend>
   <outbound>
+    <outbound>
+    <base />
+    <set-header name="Access-Control-Allow-Origin" exists-action="override">
+      <value>@(context.Request.Headers.GetValueOrDefault("Origin",""))</value>
+    </set-header>
+    <set-header name="Access-Control-Allow-Credentials" exists-action="override">
+      <value>true</value>
+    </set-header>
   </outbound>
 </policies>
 

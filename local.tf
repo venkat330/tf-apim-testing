@@ -12,8 +12,7 @@ locals {
 
   cors = {
     allowedOrigins = [
-      "https://svr-test-dev-api-management.azure-api.net/",
-      "https://azure-api.net/"
+      "https://azure-api.net"
     ]
     allowedHeaders = [
       "content-Type",
@@ -37,6 +36,8 @@ locals {
       "POST",
       "PUT",
       "DELETE",
+      "OPTIONS",
+      "PATCH"
     ]
 
   }
