@@ -1,0 +1,31 @@
+import io.gatling.core.Predef._
+
+object GatlingConfig {
+
+  val RESOURCE = sys.env.getOrElse("RESOURCE", "defaultResource")
+  val PROXY_NAME = sys.env.getOrElse("PROXY_NAME", "defaultProxyName")
+  val TYPE = sys.env.getOrElse("TYPE", "defaultType")
+  val USERS = sys.env.getOrElse("USERS", "10").toInt
+  val DURATION = sys.env.getOrElse("DURATION", "60").toInt
+
+  val key = s"$RESOURCE_$PROXY_NAME_$TYPE"
+
+  val proxyConfigDataFilePath = s"/app_data/config/$key.json"
+  val proxyCredsDataFilePath = s"/app_data/secret/$key.json"
+
+  val proxyConfigData = jsonFile(proxyConfigDataFilePath)
+  val proxyCredsData = jsonFile(proxyCredsDataFilePath)
+
+  val rampUpTime = 10 // Adjust the ramp-up time as needed
+  val testScenario = scenario("Your Test Scenario")
+    .exec(
+      http("Your Request Name")
+        .get("/your-api-endpoint")
+        .check(status.is(200))
+    )
+
+  val test = setUp(
+    testScenario.inject(rampUsers(USERS) during (DURATION seconds))
+  ).protocols(http.baseUrl("http://your-base-url"))
+
+}
