@@ -1,0 +1,39 @@
+import scala.util.Try
+
+case class CredConfig(proxyname: String, sub_key: Option[String], client_id: Option[String], client_secret: Option[String])
+
+case class AppConfigJson(proxyname: String, baseurl: Option[String], headers: Option[Map[String, String]])
+
+class ConfigManager(credJson: String, appConfigJson: String) {
+  private val credData: List[CredConfig] = ConfigManager.parseJson[CredConfig](credJson)
+  private val appData: List[AppConfigJson] = ConfigManager.parseJson[AppConfigJson](appConfigJson)
+
+  def getCredsConfig(proxyname: String): Option[CredConfig] =
+    credData.find(_.proxyname == proxyname)
+
+  def getAppConfig(proxyname: String): Option[AppConfigJson] =
+    appData.find(_.proxyname == proxyname)
+
+  def getHeaderObject(proxyname: String): Map[String, String] = {
+    val creds = getCredsConfig(proxyname)
+    val appConfig = getAppConfig(proxyname)
+
+    val headerData = creds.map { cred =>
+      var headers: Map[String, String] = Map.empty
+      appConfig.foreach(app => headers = headers ++ app.headers.getOrElse(Map.empty))
+      headers + ("Authorization" -> s"${cred.client_id.getOrElse("")}:${cred.client_secret.getOrElse("")}")
+    }
+
+    headerData.getOrElse(Map.empty)
+  }
+}
+
+object ConfigManager {
+  import org.json4s.DefaultFormats
+  import org.json4s.native.JsonMethods.parse
+
+  def parseJson[T: Manifest](json: String): List[T] = {
+    implicit val formats: DefaultFormats.type = DefaultFormats
+    Try(parse(json).extract[List[T]]).getOrElse(Nil)
+  }
+}
