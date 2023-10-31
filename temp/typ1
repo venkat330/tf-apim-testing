@@ -1,39 +1,75 @@
-import scala.util.Try
+import spray.json.DefaultJsonProtocol._
+import spray.json._
 
 case class CredConfig(proxyname: String, sub_key: Option[String], client_id: Option[String], client_secret: Option[String])
 
-case class AppConfigJson(proxyname: String, baseurl: Option[String], headers: Option[Map[String, String]])
-
-class ConfigManager(credJson: String, appConfigJson: String) {
-  private val credData: List[CredConfig] = ConfigManager.parseJson[CredConfig](credJson)
-  private val appData: List[AppConfigJson] = ConfigManager.parseJson[AppConfigJson](appConfigJson)
-
-  def getCredsConfig(proxyname: String): Option[CredConfig] =
-    credData.find(_.proxyname == proxyname)
-
-  def getAppConfig(proxyname: String): Option[AppConfigJson] =
-    appData.find(_.proxyname == proxyname)
-
-  def getHeaderObject(proxyname: String): Map[String, String] = {
-    val creds = getCredsConfig(proxyname)
-    val appConfig = getAppConfig(proxyname)
-
-    val headerData = creds.map { cred =>
-      var headers: Map[String, String] = Map.empty
-      appConfig.foreach(app => headers = headers ++ app.headers.getOrElse(Map.empty))
-      headers + ("Authorization" -> s"${cred.client_id.getOrElse("")}:${cred.client_secret.getOrElse("")}")
-    }
-
-    headerData.getOrElse(Map.empty)
+case class AppConfigJson(proxyname: String, baseurl: Option[String], headers: Option[Map[String, String]]) {
+  def toMap: Map[String, String] = {
+    val baseUrlMap = baseurl.map("baseurl" -> _).toMap
+    val headersMap = headers.getOrElse(Map.empty)
+    baseUrlMap ++ headersMap
   }
 }
 
-object ConfigManager {
-  import org.json4s.DefaultFormats
-  import org.json4s.native.JsonMethods.parse
+object AppConfigJsonProtocol extends DefaultJsonProtocol {
+  implicit val credConfigFormat = jsonFormat4(CredConfig)
+  implicit val appConfigJsonFormat = jsonFormat3(AppConfigJson)
+}
 
-  def parseJson[T: Manifest](json: String): List[T] = {
-    implicit val formats: DefaultFormats.type = DefaultFormats
-    Try(parse(json).extract[List[T]]).getOrElse(Nil)
+class AppConfig(credJson: String, appConfigJson: String) {
+  import AppConfigJsonProtocol._
+
+  // Parse JSON data
+  val credData = credJson.parseJson.convertTo[Map[String, List[CredConfig]]]
+  val appConfigData = appConfigJson.parseJson.convertTo[Map[String, List[AppConfigJson]]]
+
+  def getCredConfig(environment: String, proxyname: String): Option[CredConfig] = {
+    for {
+      credsList <- credData.get(environment)
+      credConfig <- credsList.find(_.proxyname == proxyname)
+    } yield credConfig
+  }
+
+  def getAppConfig(environment: String, proxyname: String): Option[AppConfigJson] = {
+    for {
+      appConfigList <- appConfigData.get(environment)
+      appConfig <- appConfigList.find(_.proxyname == proxyname)
+    } yield appConfig
+  }
+
+  def getHeaderConfig(environment: String, proxyname: String): Map[String, String] = {
+    val credConfig = getCredConfig(environment, proxyname)
+    val appConfig = getAppConfig(environment, proxyname)
+
+    val credConfigMap: Map[String, String] = credConfig.map { cred =>
+      Map(
+        "sub_key" -> cred.sub_key.getOrElse(""),
+        "client_id" -> cred.client_id.getOrElse(""),
+        "client_secret" -> cred.client_secret.getOrElse("")
+      ).filter { case (_, value) => value.nonEmpty }
+    }.getOrElse(Map.empty)
+
+    val appConfigMap: Map[String, String] = appConfig.map(_.toMap).getOrElse(Map.empty).filter { case (_, value) => value.nonEmpty }
+
+    val headerConfig: Map[String, String] = credConfigMap ++ appConfigMap
+
+    headerConfig
+  }
+}
+
+object Main {
+  def main(args: Array[String]): Unit = {
+    val credJson = """{ "internal": [ { "proxyname": "mock1", "sub_key": "ddd", "client_id": "id1" }, { "proxyname": "mock2", "sub_key": "ddd", "client_id": "id2" } ], "external": [ { "proxyname": "mock1", "sub_key": "ddd", "client_id": "id1" }, { "proxyname": "mock2", "sub_key": "ddd", "client_id": "id2" } ] }"""
+
+    val appConfigJson = """{ "internal": [ { "proxyname": "mock1", "baseurl": "ddd", "headers": { "Content-Type": "application/json" } }, { "proxyname": "mock2", "baseurl": "ddd", "headers": { "Content-Type": "application-json" } } ], "external": [ { "proxyname": "mock1", "baseurl": "ddd", "headers": { "Content-Type": "application/json" } }, { "proxyname": "mock2", "baseurl": "ddd", "headers": { "Content-Type": "application-json" } } ] }"""
+
+    val appConfig = new AppConfig(credJson, appConfigJson)
+
+    val environment = "internal"
+    val proxyname = "mock1"
+
+    val headerConfig = appConfig.getHeaderConfig(environment, proxyname)
+
+    println(s"Header Config for $environment/$proxyname: $headerConfig")
   }
 }
